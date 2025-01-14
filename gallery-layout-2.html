@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Local Gallery Layout</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+      }
+
+      .select-folder {
+        text-align: center;
+        margin: 20px 0;
+      }
+
+      .select-button {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        background: #0066ff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+      }
+
+      .gallery {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        padding: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .gallery-item {
+        position: relative;
+        width: 100%;
+        padding-bottom: 100%;
+        background: #f5f5f5;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .gallery-item img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .text-content {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.9);
+        font-size: 14px;
+        max-height: 30%;
+        overflow-y: auto;
+      }
+
+      @media (max-width: 768px) {
+        .gallery {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (max-width: 480px) {
+        .gallery {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="select-folder">
+      <button class="select-button" id="folderButton">Select Folder</button>
+    </div>
+    <div class="gallery" id="gallery"></div>
+
+    <script>
+      async function readFile(fileHandle) {
+        const file = await fileHandle.getFile();
+        if (file.type.includes("image")) {
+          return URL.createObjectURL(file);
+        } else if (file.name.endsWith(".rtf") || file.type.includes("text")) {
+          const text = await file.text();
+          return text;
+        }
+        return null;
+      }
+
+      async function loadGallery() {
+        try {
+          // Request permission to read files
+          const dirHandle = await window.showDirectoryPicker();
+
+          // Get all files in the directory
+          const files = [];
+          for await (const entry of dirHandle.values()) {
+            if (entry.kind === "file") {
+              files.push(entry);
+            }
+          }
+
+          // Group files by number
+          const items = {};
+          for (const fileHandle of files) {
+            const number = parseInt(fileHandle.name.split(".")[0]);
+            if (!fileHandle.name.startsWith("story")) {
+              if (!isNaN(number)) {
+                if (!items[number]) {
+                  items[number] = {};
+                }
+                if (
+                  fileHandle.name.endsWith(".png") ||
+                  fileHandle.name.endsWith(".jpg") ||
+                  fileHandle.name.endsWith(".jpeg")
+                ) {
+                  items[number].imageHandle = fileHandle;
+                } else if (
+                  fileHandle.name.endsWith(".rtf") ||
+                  fileHandle.name.endsWith(".txt")
+                ) {
+                  items[number].textHandle = fileHandle;
+                }
+              }
+            }
+          }
+
+          // Sort numbers in descending order
+          const sortedNumbers = Object.keys(items)
+            .map(Number)
+            .sort((a, b) => b - a);
+
+          const gallery = document.getElementById("gallery");
+          gallery.innerHTML = ""; // Clear existing content
+
+          // Create gallery items
+          for (const number of sortedNumbers) {
+            const item = items[number];
+            const div = document.createElement("div");
+            div.className = "gallery-item";
+
+            // Handle image
+            if (item.imageHandle) {
+              const imgUrl = await readFile(item.imageHandle);
+              if (imgUrl) {
+                const img = document.createElement("img");
+                img.src = imgUrl;
+                img.alt = `Image ${number}`;
+                img.loading = "lazy";
+                div.appendChild(img);
+              }
+            }
+
+            // Handle text
+            if (item.textHandle) {
+              const textContent = await readFile(item.textHandle);
+              if (textContent) {
+                const textDiv = document.createElement("div");
+                textDiv.className = "text-content";
+                textDiv.textContent = textContent;
+                div.appendChild(textDiv);
+              }
+            }
+
+            gallery.appendChild(div);
+          }
+        } catch (error) {
+          console.error("Error loading gallery:", error);
+          if (error.name === "AbortError") {
+            return; // User cancelled folder selection
+          }
+          document.getElementById("gallery").innerHTML =
+            "Error loading gallery content. Make sure you're using a modern browser that supports the File System Access API.";
+        }
+      }
+
+      // Add click handler to the folder selection button
+      document
+        .getElementById("folderButton")
+        .addEventListener("click", loadGallery);
+    </script>
+  </body>
+</html>
