@@ -13,7 +13,7 @@ function App() {
     const updatedItems = {};
 
     for (const fileHandle of files) {
-      const fileName = fileHandle.split("/").pop();
+      const fileName = fileHandle.split("/").pop().toLowerCase();
       console.log("--", fileName);
       const number = parseInt(fileName.split(".")[0]);
 
@@ -28,7 +28,8 @@ function App() {
             fileName.endsWith(".jpg") ||
             fileName.endsWith(".jpeg") ||
             fileName.endsWith(".mp4") ||
-            fileName.endsWith(".wav")
+            fileName.endsWith(".wav") ||
+            fileName.endsWith(".mov")
           ) {
             // 1. image
             updatedItems[number].imageHandle = fileHandle;
@@ -72,27 +73,37 @@ function App() {
       <img src={header_pic_2} width="935px" />
       <div className="gallery" id="gallery">
         {items &&
-          Object.keys(items).map((key) => {
-            console.log("🐎", items[key]);
+          Object.keys(items)
+            .reverse()
+            .map((key) => {
+              console.log("🐎", items[key]);
 
-            const item = items[key];
+              const item = items[key];
 
-            return (
-              <div key={key} className="gallery-item">
-                {item.imageHandle && (
-                  <img src={item.imageHandle} alt={`Image ${key}`} />
-                )}
-                {item.text}
-                {item.text && (
-                  <div className="text-content">
-                    {item.text}
+              return (
+                <div key={key} className="gallery-item">
+                  {(item.imageHandle && item.imageHandle?.endsWith(".mp4")) ||
+                  item.imageHandle?.endsWith(".wav") ||
+                  item.imageHandle?.endsWith(".mov") ? (
+                    <video
+                      src={item.imageHandle}
+                      alt={`Video ${key}`}
+                      controls
+                    />
+                  ) : (
+                    <img src={item.imageHandle} alt={`Image ${key}`} />
+                  )}
+                  {item.text}
+                  {item.text && (
+                    <div className="text-content">
+                      {item.text}
 
-                    {/* {tags && tags.length > 0 && <div>{tags.join("\n")}</div>} */}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                      {/* {tags && tags.length > 0 && <div>{tags.join("\n")}</div>} */}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
       </div>
     </div>
   );
