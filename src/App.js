@@ -18,51 +18,58 @@ function App() {
       const number = parseInt(fileName.split(".")[0]);
 
       // Story doesn't display in the gallery
-      if (!fileName.includes("story")) {
-        if (!isNaN(number)) {
-          if (!updatedItems[number]) {
-            updatedItems[number] = {};
-          }
-          if (
-            fileName.endsWith(".png") ||
-            fileName.endsWith(".jpg") ||
-            fileName.endsWith(".jpeg") ||
-            fileName.endsWith(".mp4") ||
-            fileName.endsWith(".wav") ||
-            fileName.endsWith(".mov")
-          ) {
-            // 1. image
-            updatedItems[number].imageHandle = fileHandle;
-          } else if (fileName.endsWith(".txt")) {
-            fetch(fileHandle)
-              .then((response) => response.text())
-              .then((data) => {
-                // 2. text
-                updatedItems[number].text = data;
-              });
-          }
-
-          // 3. tags
-          // const tagsFilePath = "./assets/tags.txt";
-          // fetch(tagsFilePath)
-          //   .then((response) => response.text())
-          //   .then((data) => {
-          //     // Split the content into an array
-          //     console.log("----> tags", data);
-
-          //     const items = data.split("\n").filter(Boolean); // Remove any empty lines
-
-          //     // Shuffle and pick 10 random items
-          //     const shuffled = items.sort(() => 0.5 - Math.random());
-          //     const selectedTags = shuffled.slice(0, 10);
-
-          //     updatedItems[number].tags = selectedTags;
-          //   });
+      if (!isNaN(number)) {
+        // Create empty item with idx
+        if (!updatedItems[number]) {
+          updatedItems[number] = {};
         }
+
+        // 1. image or video
+        if (
+          fileName.endsWith(".png") ||
+          fileName.endsWith(".jpg") ||
+          fileName.endsWith(".jpeg") ||
+          fileName.endsWith(".mp4") ||
+          fileName.endsWith(".wav") ||
+          fileName.endsWith(".mov")
+        ) {
+          updatedItems[number].imageHandle = fileHandle;
+        } else if (fileName.endsWith(".txt")) {
+          fetch(fileHandle)
+            .then((response) => response.text())
+            .then((data) => {
+              // 2. text
+              updatedItems[number].text = data;
+            });
+        }
+
+        console.log(
+          "updatedItems[",
+          number,
+          "]\nmedium=",
+          updatedItems[number].imageHandle,
+          "\ntext=",
+          updatedItems[number].text
+        );
+
+        // 3. tags
+        // const tagsFilePath = "./assets/tags.txt";
+        // fetch(tagsFilePath)
+        //   .then((response) => response.text())
+        //   .then((data) => {
+        //     // Split the content into an array
+        //     console.log("----> tags", data);
+
+        //     const items = data.split("\n").filter(Boolean); // Remove any empty lines
+
+        //     // Shuffle and pick 10 random items
+        //     const shuffled = items.sort(() => 0.5 - Math.random());
+        //     const selectedTags = shuffled.slice(0, 10);
+
+        //     updatedItems[number].tags = selectedTags;
+        //   });
       }
     }
-
-    console.log("updatedItems", updatedItems);
 
     setItems(updatedItems);
   }, []);
