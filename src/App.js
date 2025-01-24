@@ -5,73 +5,82 @@ import "./App.css";
 import { useEffect, useState } from "react";
 
 function App() {
-  const [items, setItems] = useState();
+  const [items, setItems] = useState([]);
+
+  // Import all files from the medium folder
+  const importFiles = (requireContext) => {
+    return requireContext.keys().map((fileName) => ({
+      name: fileName.replace("./", ""), // Remove leading "./"
+      path: requireContext(fileName), // Get file path
+    }));
+  };
+
+  const getContentFromFile = async (txtFile) => {
+    let textContent = "";
+
+    try {
+      const response = await fetch(txtFile.path);
+      if (response.ok) {
+        textContent = await response.text();
+      } else {
+        textContent = ""; // Set to an empty string if the response is not OK
+      }
+    } catch (error) {
+      console.error("Error fetching the file:", error);
+      textContent = ""; // Set to an empty string if fetch fails
+    }
+  };
 
   useEffect(() => {
-    const importAll = (r) => r.keys().map(r);
-    const files = importAll(require.context("./medium", false));
-    const updatedItems = {};
+    // Import .txt files
+    const txtFiles = importFiles(require.context("./medium", false, /\.txt$/));
 
-    for (const fileHandle of files) {
-      const fileName = fileHandle.split("/").pop().toLowerCase();
-      console.log("--", fileName);
-      const number = parseInt(fileName.split(".")[0]);
+    // Import .jpg files
+    const mediumFiles = importFiles(
+      require.context("./medium", false, /\.(png|jpg|jpeg|mp4|wav|mov)$/)
+    );
 
-      // Story doesn't display in the gallery
-      if (!isNaN(number)) {
-        // Create empty item with idx
-        if (!updatedItems[number]) {
-          updatedItems[number] = {};
-        }
+    // Fetch the content of each .txt file and pair it with its image
+    const fetchFileContents = async () => {
+      const groupedItems = await Promise.all(
+        mediumFiles.map(async (mediumFile) => {
+          const baseName = mediumFile.name.split(".")[0];
+          const txtFile = txtFiles.find((textFile) =>
+            textFile.name.startsWith(baseName + ".")
+          );
 
-        // 1. image or video
-        if (
-          fileName.endsWith(".png") ||
-          fileName.endsWith(".jpg") ||
-          fileName.endsWith(".jpeg") ||
-          fileName.endsWith(".mp4") ||
-          fileName.endsWith(".wav") ||
-          fileName.endsWith(".mov")
-        ) {
-          updatedItems[number].imageHandle = fileHandle;
-        } else if (fileName.endsWith(".txt")) {
-          fetch(fileHandle)
-            .then((response) => response.text())
-            .then((data) => {
-              // 2. text
-              updatedItems[number].text = data;
-            });
-        }
+          try {
+            // Fetch the content of the .txt file
+            let content = "";
+            if (txtFile) {
+              const response = await fetch(txtFile.path);
+              content = response.ok ? await response.text() : null;
+            }
 
-        console.log(
-          "updatedItems[",
-          number,
-          "]\nmedium=",
-          updatedItems[number].imageHandle,
-          "\ntext=",
-          updatedItems[number].text
-        );
+            return {
+              index: parseInt(baseName),
+              text: content || "", // Fallback to empty string if content is null/undefined
+              image: mediumFile,
+            };
+          } catch (error) {
+            console.error(`Failed to fetch file: ${txtFile.name}`, error);
+            return {
+              index: parseInt(baseName),
+              text: "", // Fallback in case of fetch failure
+              image: mediumFile,
+            };
+          }
+          return null;
+        })
+      );
 
-        // 3. tags
-        // const tagsFilePath = "./assets/tags.txt";
-        // fetch(tagsFilePath)
-        //   .then((response) => response.text())
-        //   .then((data) => {
-        //     // Split the content into an array
-        //     console.log("----> tags", data);
+      const filteredItems = groupedItems.filter(Boolean);
+      const sortedItems = [...filteredItems].sort((a, b) => a.index - b.index);
 
-        //     const items = data.split("\n").filter(Boolean); // Remove any empty lines
+      setItems(sortedItems); // Filter out null entries
+    };
 
-        //     // Shuffle and pick 10 random items
-        //     const shuffled = items.sort(() => 0.5 - Math.random());
-        //     const selectedTags = shuffled.slice(0, 10);
-
-        //     updatedItems[number].tags = selectedTags;
-        //   });
-      }
-    }
-
-    setItems(updatedItems);
+    fetchFileContents();
   }, []);
 
   return (
@@ -79,38 +88,33 @@ function App() {
       <img src={header_pic_1} width="935px" />
       <img src={header_pic_2} width="935px" />
       <div className="gallery" id="gallery">
-        {items &&
-          Object.keys(items)
-            .reverse()
-            .map((key) => {
-              console.log("🐎", items[key]);
+        {items.length > 0 &&
+          items.toReversed().map((item, index) => {
+            console.log("🐎", items.length, items[index]);
 
-              const item = items[key];
+            const mediumName = item.image.name;
+            const mediumPath = item.image.path;
 
-              return (
-                <div key={key} className="gallery-item">
-                  {(item.imageHandle && item.imageHandle?.endsWith(".mp4")) ||
-                  item.imageHandle?.endsWith(".wav") ||
-                  item.imageHandle?.endsWith(".mov") ? (
-                    <video
-                      src={item.imageHandle}
-                      alt={`Video ${key}`}
-                      controls
-                    />
-                  ) : (
-                    <img src={item.imageHandle} alt={`Image ${key}`} />
-                  )}
-                  {item.text}
-                  {item.text && (
-                    <div className="text-content">
-                      {item.text}
+            return (
+              <div key={index} className="gallery-item">
+                {mediumName.endsWith(".mp4") ||
+                mediumName.endsWith(".wav") ||
+                mediumName.endsWith(".mov") ? (
+                  <video src={mediumPath} alt={`Video ${index}`} controls />
+                ) : (
+                  <img src={mediumPath} alt={`Image ${index}`} />
+                )}
+                {item.text}
+                {item.text && (
+                  <div className="text-content">
+                    {item.text}
 
-                      {/* {tags && tags.length > 0 && <div>{tags.join("\n")}</div>} */}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                    {/* {tags && tags.length > 0 && <div>{tags.join("\n")}</div>} */}
+                  </div>
+                )}
+              </div>
+            );
+          })}
       </div>
     </div>
   );
