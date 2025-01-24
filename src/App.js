@@ -15,22 +15,6 @@ function App() {
     }));
   };
 
-  const getContentFromFile = async (txtFile) => {
-    let textContent = "";
-
-    try {
-      const response = await fetch(txtFile.path);
-      if (response.ok) {
-        textContent = await response.text();
-      } else {
-        textContent = ""; // Set to an empty string if the response is not OK
-      }
-    } catch (error) {
-      console.error("Error fetching the file:", error);
-      textContent = ""; // Set to an empty string if fetch fails
-    }
-  };
-
   useEffect(() => {
     // Import .txt files
     const txtFiles = importFiles(require.context("./medium", false, /\.txt$/));
